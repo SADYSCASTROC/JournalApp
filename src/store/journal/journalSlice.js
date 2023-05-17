@@ -38,15 +38,26 @@ export const journalSlice = createSlice({
         },
 
         setSaving: (state) => {
+            state.isSaving = true;
+            state.messageSaved ='';
 
         },
 
         updateNote: (state, action) => {
+            state.isSaving = false;
+            state.notes = state.notes.map(note =>{
+
+                if( note.id === action.payload.id){
+                    return action.payload;
+                }
+                return note;
+            })
+
+            state.messageSaved = `${ action.payload.title}, Nota Actualizada correctamente `
 
         },
 
         deleteNoteById: (state, action) => {
-            // todo lo que se coloca en los reducer tiene que ser  trabajos sincronos
 
         },
 

@@ -1,6 +1,6 @@
 import { collection, doc, setDoc } from "firebase/firestore/lite";
 import { FirebaseDB } from "../../firebase/config";
-import { addNewEmptyNote, savinNewNote, setActiveNote, setNotes } from "./journalSlice";
+import { addNewEmptyNote, savinNewNote, setActiveNote, setNotes, setSaving, updateNote } from "./journalSlice";
 import { loadNotes } from "../../helpers";
 
 // thunks es cuando tengo que despachar tareas asincronas para el reducer
@@ -43,4 +43,23 @@ export const startLoadingNotes = () => {
         dispatch(setNotes(notes));
     }
 
+}
+
+export const startSaveNote = () =>{
+    return async(dispatch, getstate) =>{
+
+        dispatch( setSaving())
+
+        const {uid} =getstate().auth;
+        const { active:note} = getstate().journal;
+
+        const noteToFiresStore = {...note};
+        delete noteToFiresStore.id;
+        console.log(noteToFiresStore)
+
+        const docRef = doc( FirebaseDB,`${uid}/journal/notes/${note.id}` );
+        await setDoc( docRef, noteToFiresStore,{ merge:true})
+
+        dispatch( updateNote( note))
+    }
 }
