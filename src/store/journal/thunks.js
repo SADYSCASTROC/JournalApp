@@ -1,7 +1,7 @@
-import { collection, doc, setDoc } from "firebase/firestore/lite";
+import { collection, deleteDoc, doc, setDoc } from "firebase/firestore/lite";
 import { FirebaseDB } from "../../firebase/config";
-import { addNewEmptyNote, savinNewNote, setActiveNote, setNotes, setSaving, updateNote } from "./journalSlice";
-import { loadNotes } from "../../helpers";
+import { addNewEmptyNote, deleteNoteById, savinNewNote, setActiveNote, setNotes, setPhotosToActiveNote, setSaving, updateNote } from "./journalSlice";
+import { fileUpload, loadNotes } from "../../helpers";
 
 // thunks es cuando tengo que despachar tareas asincronas para el reducer
 export const startNewNote = () => {
@@ -16,18 +16,19 @@ export const startNewNote = () => {
         const newNote = {
             title: '',
             body: '',
+            imageUrls: [],
             date: new Date().getTime(),
         }
 
         const newDoc = doc(collection(FirebaseDB, `${uid}/journal/notes`));
-        const setDocResp = await setDoc(newDoc, newNote);
+        await setDoc(newDoc, newNote);
 
         newNote.id = newDoc.id;
 
 
         // dispach
-        dispatch(addNewEmptyNote(newNote))
-        dispatch(setActiveNote(newNote))
+        dispatch(addNewEmptyNote(newNote));
+        dispatch(setActiveNote(newNote));
 
     }
 }
@@ -45,21 +46,51 @@ export const startLoadingNotes = () => {
 
 }
 
-export const startSaveNote = () =>{
-    return async(dispatch, getstate) =>{
+export const startSaveNote = () => {
+    return async (dispatch, getstate) => {
 
-        dispatch( setSaving())
+        dispatch(setSaving())
 
-        const {uid} =getstate().auth;
-        const { active:note} = getstate().journal;
+        const { uid } = getstate().auth;
+        const { active: note } = getstate().journal;
 
-        const noteToFiresStore = {...note};
+        const noteToFiresStore = { ...note };
         delete noteToFiresStore.id;
         console.log(noteToFiresStore)
 
-        const docRef = doc( FirebaseDB,`${uid}/journal/notes/${note.id}` );
-        await setDoc( docRef, noteToFiresStore,{ merge:true})
+        const docRef = doc(FirebaseDB, `${uid}/journal/notes/${note.id}`);
+        await setDoc(docRef, noteToFiresStore, { merge: true })
 
-        dispatch( updateNote( note))
+        dispatch(updateNote(note))
+    }
+}
+
+export const startUploadingFiles = (files = []) => {
+
+    return async (dispatch) => {
+        dispatch(setSaving());
+
+        const fileUploadPromises = [];
+        for (const file of files) {
+            fileUploadPromises.push(fileUpload(file))
+        }
+
+        const photosUrls = await Promise.all(fileUploadPromises);
+
+        dispatch(setPhotosToActiveNote(photosUrls));
+    }
+}
+
+export const startDeletingNote = () =>{
+    return async(dispach, getState) =>{
+
+        const { uid } = getState().auth;
+        const { active: note } = getState().journal;
+
+        const docRef = doc( FirebaseDB, `${ uid } /journal/notes/${note.id}`);
+        const resp = await deleteDoc( docRef);
+
+        dispach( deleteNoteById(note.id));
+
     }
 }
